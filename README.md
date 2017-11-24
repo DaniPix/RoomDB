@@ -1,6 +1,6 @@
 # RoomDB
 
-Database
+DATABASE
 
 ```
 @Database(entities = {MonthlyRecap.class}, version = 16)
@@ -25,7 +25,7 @@ public abstract MonthlyRecapDAO monthlyRecapDAO();
   }
 ```
 
-Entity
+ENTITY
 
 ```
 @Entity(tableName = "MonthlyRecaps")
@@ -55,7 +55,7 @@ public class MonthlyRecap {
 }
 ```
 
-Database Access Object
+DATABASE ACCESS OBJECT
 
 ```
 @Dao
@@ -73,3 +73,46 @@ public interface MonthlyRecapDAO {
   void insertMonthlyRecaps(MonthlyRecap... monthlyRecap);
 }
 ```
+
+MIGRATION FROM VERSION 15 TO 16
+```
+private static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+  @Override
+  public void migrate(@NonNull SupportSQLiteDatabase database) {
+  // We can't leave the first migration empty because MonthlyRecap table and MonthlyRecap entity are not compatible
+    database.execSQL(CREATE MonthlyRecap_temp …");
+    
+    database.execSQL("INSERT INTO MonthlyRecap_temp … FROM MonthlyRecap");
+    
+    database.execSQL("DROP TABLE MonthlyRecap");
+    
+    database.execSQL("ALTER TABLE MonthlyRecaps_new RENAME TO MonthlyRecaps");
+  }
+};
+```
+MIGRATION FROM VERSION 16 TO 17
+```
+private static final Migration MIGRATION_16_17 = new Migration(16, 17) {
+  @Override
+  public void migrate(@NonNull SupportSQLiteDatabase database) {
+	// If you let this empty it will attempt to copy everything from MonthlyRecaps (newly created table) into 
+  // another newly created table called MonthlyRecaps (basically creates a copy retaining the data inside the table)
+  }
+};
+```
+
+TESTING MIGRATIONS
+```
+@Rule
+public MigrationTestHelper migrationTestHelper =
+        New MigrationTestHelper(InstrumentationRegistry.getInstrumentation(),
+        RebtelDB.class.getCanonicalName(), 
+        new FrameworkSQLiteOpenHelperFactory());
+       
+       
+SupportSQLiteDatabase db = migrationTestHelper.createDatabase(DATABASE_NAME, 15);
+db.runMigrationsAndValidate(DATABASE_NAME, 17, MIGRATION_15_16, MIGRATION_16_17)      
+```
+
+
+
