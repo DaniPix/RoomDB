@@ -116,6 +116,84 @@ public MigrationTestHelper migrationTestHelper =
 SupportSQLiteDatabase db = migrationTestHelper.createDatabase(DATABASE_NAME, 15);
 db.runMigrationsAndValidate(DATABASE_NAME, 17, MIGRATION_15_16, MIGRATION_16_17)      
 ```
+```
+@RunWith(AndroidJUnit4.class)
+public class Migration15To17Test {
+
+	private static final String TEST_REBTEL_DB = "test.rebtel.db";
+
+	private SQLiteTestOpenHelper helper;
+
+	@Rule
+	public MigrationTestHelper migrationTestHelper = new MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), RebtelDB.class.getCanonicalName());
+
+	@Before
+	public void setUp() throws Exception {
+		// Create the database with version 15 (original SQLite version)
+		migrationTestHelper = new MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), RebtelDB.class.getCanonicalName());
+		helper = new SQLiteTestOpenHelper(InstrumentationRegistry.getTargetContext(), TEST_REBTEL_DB);
+		// Create table for each test to ensure consistency
+		SQLiteTestHelper.createTable(helper);
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		SQLiteTestHelper.clearDatabase(helper);
+	}
+
+	@Test
+	public void migrationFrom15To17_containsCorrectData() throws IOException {
+		insertMonthlyRecap();
+		migrationTestHelper.runMigrationsAndValidate(TEST_REBTEL_DB, 17, true, MIGRATION_15_16, MIGRATION_16_17);
+	}
 
 
+	private static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+		@Override
+		public void migrate(@NonNull SupportSQLiteDatabase database) {
+			database.execSQL("CREATE TABLE MonthlyRecaps_new (_id integer not null primary key autoincrement, " +
+					"date text, " +
+					"monthAndYear text, " +
+					"totalCallsCount integer not null," +
+					"calledNumbersCount integer not null, " +
+					"destinationCountriesCount integer not null," + "" +
+					"contactsCalled text)");
 
+
+			database.execSQL("INSERT INTO MonthlyRecaps_new (_id, date, monthAndYear, totalCallsCount, calledNumbersCount, destinationCountriesCount, contactsCalled) " +
+					"SELECT _id, date, monthAndYear, totalCallsCount, calledNumbersCount, destinationCountriesCount, contactsCalled FROM MonthlyRecap");
+
+			database.execSQL("DROP TABLE MonthlyRecap");
+
+			database.execSQL("ALTER TABLE MonthlyRecaps_new RENAME TO MonthlyRecaps");
+		}
+	};
+
+	private static final Migration MIGRATION_16_17 = new Migration(16, 17) {
+		@Override
+		public void migrate(@NonNull SupportSQLiteDatabase database) {
+
+		}
+	};
+
+	private void insertMonthlyRecap() {
+		//Create the database with the initial version 1 schema and insert a monthly recap
+		MonthlyRecap monthlyRecap = new MonthlyRecap();
+
+		monthlyRecap.setDate("2017-06-01");
+		monthlyRecap.setCalledNumberCount(20);
+		monthlyRecap.setTotalCallCount(36);
+		monthlyRecap.setDestinationCountryCount(2);
+
+		List<Contact> calledContacts = new ArrayList<>();
+		calledContacts.add(new Contact("+46702691245", 35, 4353));
+		calledContacts.add(new Contact("+46702691245", 35, 4353));
+		calledContacts.add(new Contact("+46702691245", 35, 4353));
+		calledContacts.add(new Contact("+46702691245", 35, 4353));
+		monthlyRecap.setCalls(calledContacts);
+
+		SQLiteTestHelper.insertMonthlyRecap(monthlyRecap, helper);
+	}
+
+}
+```
