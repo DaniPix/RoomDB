@@ -74,6 +74,47 @@ public interface MonthlyRecapDAO {
 }
 ```
 
+TYPE CONVERTERS
+```
+
+public enum MessageDirection {
+	INCOMING(0),
+	OUTGOING(1);
+
+	private int direction;
+
+	MessageDirection(int direction) {
+		this.direction = direction;
+	}
+
+	public int getDirection() {
+		return direction;
+	}
+}
+
+
+public class MessageDirectionConverter {
+
+	@TypeConverter
+	public static int toInt(MessageDirection value) {
+		return value.getDirection();
+	}
+
+	@TypeConverter
+	public static MessageDirection toValue(int value){
+		return MessageDirection.values()[value];
+	}
+}
+
+@ColumnInfo(name = "direction")
+	@TypeConverters(MessageDirectionConverter.class)
+	private MessageDirection direction;
+
+
+```
+
+
+
 MIGRATION FROM VERSION 15 TO 16
 ```
 private static final Migration MIGRATION_15_16 = new Migration(15, 16) {
